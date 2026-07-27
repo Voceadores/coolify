@@ -58,8 +58,8 @@ final class BootstrapService
         ];
 
         $commonConfig = [
-            require($this->configPath . '/common.php'),
-            require($this->configPath . '/' . $mode . '.php'),
+            is_readable($this->configPath . '/common.php') ? require($this->configPath . '/common.php') : [],
+            is_readable($this->configPath . '/' . $mode . '.php') ? require($this->configPath . '/' . $mode . '.php') : [],
         ];
 
         $dynamicConfigFile = $this->configPath . '/dynamic.php';
