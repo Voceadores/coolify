@@ -1,0 +1,122 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      HUMHUB_DEBUG: "false"
+      HUMHUB_CONFIG__COMPONENTS__DB__DSN: "mysql:host=db;dbname=${MYSQL_DATABASE:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__USERNAME: "${MYSQL_USER:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__PASSWORD: "${MYSQL_PASSWORD}"
+      HUMHUB_CONFIG__COMPONENTS__REQUEST__TRUSTED_HOSTS: '["0.0.0.0/0"]'
+      HUMHUB_CONFIG__COMPONENTS__URL_MANAGER__SHOW_SCRIPT_NAME: "false"
+      HUMHUB_CONFIG__COMPONENTS__URL_MANAGER__ENABLE_PRETTY_URL: "true"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__CLASS: "yii\\redis\\Connection"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__HOSTNAME: "redis"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__PORT: "6379"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__DATABASE: "0"
+      HUMHUB_CONFIG__COMPONENTS__SESSION__CLASS: "yii\\redis\\Session"
+      HUMHUB_CONFIG__COMPONENTS__CACHE__CLASS: "yii\\redis\\Cache"
+    volumes:
+      - humhub_config:/var/www/html/protected/config
+      - humhub_uploads:/var/www/html/uploads
+      - humhub_assets:/var/www/html/assets
+      - humhub_runtime:/var/www/html/protected/runtime
+      - humhub_modules:/var/www/html/protected/modules
+      - humhub_themes:/var/www/html/themes
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.humhub.loadbalancer.server.port=80"
+
+  queue:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      HUMHUB_DEBUG: "false"
+      HUMHUB_CONFIG__COMPONENTS__DB__DSN: "mysql:host=db;dbname=${MYSQL_DATABASE:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__USERNAME: "${MYSQL_USER:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__PASSWORD: "${MYSQL_PASSWORD}"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__CLASS: "yii\\redis\\Connection"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__HOSTNAME: "redis"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__PORT: "6379"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__DATABASE: "0"
+      HUMHUB_CONFIG__COMPONENTS__SESSION__CLASS: "yii\\redis\\Session"
+      HUMHUB_CONFIG__COMPONENTS__CACHE__CLASS: "yii\\redis\\Cache"
+    volumes:
+      - humhub_config:/var/www/html/protected/config
+      - humhub_uploads:/var/www/html/uploads
+      - humhub_assets:/var/www/html/assets
+      - humhub_runtime:/var/www/html/protected/runtime
+      - humhub_modules:/var/www/html/protected/modules
+      - humhub_themes:/var/www/html/themes
+    command: ["sh", "-c", "while true; do php protected/yii queue/run --interactive=0; sleep 60; done"]
+
+  cron:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      HUMHUB_DEBUG: "false"
+      HUMHUB_CONFIG__COMPONENTS__DB__DSN: "mysql:host=db;dbname=${MYSQL_DATABASE:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__USERNAME: "${MYSQL_USER:-humhub}"
+      HUMHUB_CONFIG__COMPONENTS__DB__PASSWORD: "${MYSQL_PASSWORD}"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__CLASS: "yii\\redis\\Connection"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__HOSTNAME: "redis"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__PORT: "6379"
+      HUMHUB_CONFIG__COMPONENTS__REDIS__DATABASE: "0"
+      HUMHUB_CONFIG__COMPONENTS__SESSION__CLASS: "yii\\redis\\Session"
+      HUMHUB_CONFIG__COMPONENTS__CACHE__CLASS: "yii\\redis\\Cache"
+    volumes:
+      - humhub_config:/var/www/html/protected/config
+      - humhub_uploads:/var/www/html/uploads
+      - humhub_assets:/var/www/html/assets
+      - humhub_runtime:/var/www/html/protected/runtime
+      - humhub_modules:/var/www/html/protected/modules
+      - humhub_themes:/var/www/html/themes
+    command: ["sh", "-c", "while true; do php protected/yii cron/run --interactive=0; sleep 60; done"]
+
+  db:
+    image: mariadb:11.8
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: "${MYSQL_DATABASE:-humhub}"
+      MARIADB_USER: "${MYSQL_USER:-humhub}"
+      MARIADB_PASSWORD: "${MYSQL_PASSWORD}"
+      MARIADB_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+    volumes:
+      - humhub_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$${MARIADB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - humhub_redis:/data
+
+volumes:
+  humhub_config:
+  humhub_uploads:
+  humhub_assets:
+  humhub_runtime:
+  humhub_modules:
+  humhub_themes:
+  humhub_db:
+  humhub_redis:

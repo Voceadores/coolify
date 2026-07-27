@@ -1,0 +1,29 @@
+# HumHub
+/protected/vendor
+/protected/runtime/*
+!/protected/runtime/.gitignore
+/protected/config/dynamic.php
+/protected/modules/*
+!/protected/modules/.gitkeep
+/node_modules
+/.env
+
+# Uploads & Assets
+/uploads/*
+!/uploads/.gitkeep
+/assets/*
+!/assets/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
